@@ -1,0 +1,244 @@
+---
+title: "AUS RAIN DATA"
+output: html_notebook
+---
+
+# Installs n Imports
+```{r}
+install.packages("pROC")
+install.packages("car")
+install.packages("caTools")
+install.packages("tidyverse")
+library(pROC)
+library(car)
+library(caTools)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+install.packages("corrplot")
+library(corrplot)
+install.packages(c("rpart", "rpart.plot", "e1071", "randomForest", "AppliedPredictiveModeling", "caret", "ROCR"))
+library(rpart) #This one is for building decision trees
+library(rpart.plot)
+library(e1071)
+library(randomForest)
+library(ROCR)
+library(caret)
+```
+
+
+
+# Make it rain
+
+```{r}
+ausdata <- read.csv("weatherAUS.csv")
+head(ausdata)
+```
+
+# Sumarry
+
+```{r}
+summary(ausdata)
+```
+
+# Column names
+
+```{r}
+colnames(ausdata)
+```
+
+# Initial observations with predicitions
+
+Multiple columns can be used to predict things and determine things.
+
+Big hint was weather there would be RainTomorrow.. and how accurate this would be.
+
+
+Meant to use Classifcation
+
+Personal Note - DO NOT LOOK at CORRELATION
+
+
+Initial Prediction =
+
+Looking at trends later..
+Initial to look at this in better light. 
+1. Brisbane has faster wind than the rest of austrailia
+
+Expand this further
+2. Comparison between rainToday and rainTomorrow 
+
+3. Decision Trees to determine how reliable RainTomorrow would be.
+
+RainTomorrow = Boolean. Yes No
+look how it is done on Classification module for R.. 
+
+# inital play
+
+Initial plot
+```{r}
+qplot(x = ausdata$Date , y = ausdata$WindGustSpeed, col = ausdata$Location)
+```
+
+```{r}
+qplot(x = ausdata$Date , y = ausdata$WindGustSpeed)
+```
+add a line.. 
+
+
+```{r}
+cols <- colnames(ausdata)
+```
+
+
+
+Get rid of the nulls
+```{r}
+ausdfnoNA <- na.omit(ausdata)
+```
+
+DropNa(RF, var=c("dede")) - drop column
+
+data$dowmdomw[column = value]<- NULL
+
+data <- data[condition]
+
+# 1. Brisbane has faster wind than the rest of austrailia
+
+Using Excel the highest speed in Brisbane is 93
+
+Fasted wind in each location 
+
+```{r}
+max(ausdata$WindGustSpeed, na.rm = TRUE)
+```
+
+```{r}
+max(ausdata$Location == "Brisbane", ausdata$WindGustSpeed, na.rm = TRUE)
+```
+
+dataBris <- ausdata[ausdata$Location == "Brisbane"]
+
+```{r}
+dataBris <- ausdata$Location == "Brisbane"
+```
+
+```{r}
+summary(dataBris)
+```
+
+
+
+
+# 3. Decision Trees to determine how reliable RainTomorrow would be
+
+```{r}
+head(ausdata)
+str(ausdata)
+summary(ausdata)
+head(ausdata)
+tail(ausdata)
+```
+
+Data Clean For what we need.
+
+2 rounds of Data clean..
+
+round 1 & 2 Clean set of RainToday
+
+```{r}
+data1aus <- ausdata[complete.cases(ausdata$RainToday),]
+dataRTRT <- data1aus[complete.cases(data1aus$RainTomorrow),]
+```
+
+
+Plot what results based on country, based on data and RainToday:
+
+```{r}
+qplot(x = dataRTRT$Date, y = dataRTRT$RainToday, col = dataRTRT$Location)
+```
+
+Was a mistake.. BUT there is no presence of N/A's
+
+Plot what results based on country, based on data and RainTomorrow:
+
+```{r}
+qplot(x = dataRTRT$Date, y = dataRTRT$RainTomorrow, col = dataRTRT$Location)
+```
+
+All HOPE lost...
+CHEAT... we need no NA's data without Null's..
+
+```{r}
+dataDD <-  na.omit(dataRTRT) 
+head(dataDD)
+```
+
+Create train, test data from the data (de Nulled)
+
+```{r}
+set.seed(123)
+sample <- sample.split(dataDD,SplitRatio = 0.75)
+train <- subset(dataDD, sample==TRUE) 
+test  <- subset(dataDD, sample==FALSE)
+```
+
+Specify variables/columns which I thought would affect the weather.. and create a decision tree based on that.
+```{r}
+fit <-  rpart(RainToday ~ Location + MinTemp + MaxTemp +Temp9am+Humidity9am+Pressure9am+Cloud9am+ Evaporation + Sunshine,
+              method = "class",
+              data = dataDD,
+              control =rpart.control(minsplit = 1, depth= 5),
+              parms= list(split ="information"))
+```
+
+Plot the decision tree..
+
+```{r}
+rpart.plot(fit, type=5, extra=2)
+```
+
+Perform a prediction 
+
+```{r}
+predict(fit, test)
+```
+
+Remove RainToday so that i can test.
+```{r}
+dataDDT <- dataDD 
+dataDD$RainToday <- NULL
+```
+
+Perform another prediction and produce a matrix:
+```{r}
+Predict_dd <-  predict(object=fit,
+                        newdata= test,
+                        type="class")
+
+confusionMatrix(data=Predict_dd, reference= test$RainToday)
+```
+
+
+
+predictdd 
+
+compare id by id by test data and check value.
+
+
+calculation is CORRECT
+
+test$RainTomorrow Predict_dd YES/NO
+
+```{r}
+score <- 0
+for (i in 1:nrow(test)){
+  if (test$RainTomorrow[i] == Predict_dd[i]) {
+    score <- score+1
+  }
+}
+(score / nrow(test))*100
+```
+
+TUNE it..
+

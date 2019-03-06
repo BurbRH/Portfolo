@@ -1,0 +1,688 @@
+---
+title: "Regression Notebook Final Version"
+output: html_notebook
+---
+
+## Overview
+
+Defintion of Tasks:
+ 
+-send the data – Audrey for today
+- translate sizes into measurable area – Shaji - Tuesday
+- write R code – Daniel – Wednesday / Thursday
+-conclusions & analysis – Ross / Thursday / Friday
+- organise another meeting on Friday - Audrey
+ 
+ 
+Overview
+ 
+Subject matter: Regression
+ 
+With focus to look at:
+ 
+Target variable: quantities
+Exploratory variables:
+month (translated into  scale to define ‘coldness’ from 1 to 4 depending on season)
+type of scarf (weight soft Boolean),
+price (Actualsalesamt_central / quantity),
+size (calculate the area based on sizegrouping accessories
+ 
+
+## Cleanse of Data
+
+Shaji:
+
+I’ve completed the tasks we agreed upon, uploaded the file with a “_cleansed” added to the file name.
+ 
+ 
+Following is what I have done.
+ 
+Added 4 new columns,
+cal_month_DF
+actualsalesamt_central_DF
+weight_softs_DF
+sizegroupings_accessories_DF
+ 
+ 
+Here are the values.
+ 
+ 
+cal_month_DF
+Winter 12,1,2 = 1
+Spring 3,4,5 = 2
+Summer 6,7,8 = 3
+Autumn 9,10,11 = 4
+ 
+ 
+ 
+actualsalesamt_central_DF
+= actualsalesamt_central/quantity
+ 
+ 
+weight_softs_DF
+Heavy = 1
+Light = 2
+ 
+sizegroupings_accessories_DF
+Area of the scarf calculated and numeric weighting given as follows.
+ 
+ 
+Size
+Area
+Weighting
+110 X 6 CM
+660
+1
+130 X 6.5 CM
+845
+2
+175 X 8 CM
+1400
+3
+50 X 50 CM
+2500
+4
+130 X 20 CM
+2600
+5
+120 X 25 CM
+3000
+6
+170 X 20 CM
+3400
+7
+60 X 60 CM
+3600
+8
+155 X 30 CM
+4650
+9
+200 X 25 CM
+5000
+10
+168 X 30 CM
+5040
+11
+180 X 30 CM
+5400
+12
+230 X 25 CM
+5750
+13
+200 X 30 CM
+6000
+14
+80 X 80 CM
+6400
+15
+180 X 36 CM
+6480
+16
+180 X 37 CM
+6660
+17
+230 X 30 CM
+6900
+18
+200 X 36 CM
+7200
+19
+250 X 30 CM
+7500
+20
+90 X 90 CM
+8100
+21
+200 X 45 CM
+9000
+22
+98 X 98 CM
+9604
+23
+200 X 50 CM
+10000
+24
+200 X 60 CM
+12000
+25
+180 X 70 CM
+12600
+26
+190 X 70 CM
+13300
+27
+164 X 82 CM
+13448
+28
+200 X 70 CM
+14000
+29
+167 X 85 CM
+14195
+30
+120 X 120 CM
+14400
+31
+220 X 70 CM
+15400
+32
+180 X 90 CM
+16200
+33
+175 X 100 CM
+17500
+34
+200 X 90 CM
+18000
+35
+140 X 140 CM
+19600
+36
+200 X 100 CM
+20000
+37
+145 X 145 CM
+21025
+38
+270 X 90 CM
+24300
+39
+200 X 140 CM
+28000
+40
+
+
+## Brief
+
+We are working to examine the relationship between the purchasing of scarves at Burberry and several different variables, we will apply our learnings in regression to improve our understanding of the correlation between variables.
+
+## Load Required Libraries
+
+```{r}
+install.packages("pROC")
+install.packages("caTools")
+install.packages("tidyverse")
+library(plyr)
+library(pROC)
+library(caTools)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+install.packages("corrplot")
+library(corrplot)
+install.packages("readxl")
+library(readxl)
+install.packages("tibble")
+install.packages("dplyr")
+library(dplyr)
+```
+
+## Importing and Exploring the Data Set
+
+Import the main data to dataset variable and a summary statistics (sheet 2) imported into another dataset.
+```{r}
+dataset <- read_xlsx("DF - regression_cleansed.xlsx", sheet = 1) # Raw sales data
+dataset2 <- read_xlsx("DF - regression_cleansed.xlsx", sheet = 2) # statistical sales data
+```
+
+Show summaries of information of the Dataset to ensure data has been alocated to a dataframe.
+```{r}
+summary(dataset2)
+str(dataset2)
+```
+
+## Attempt 1 --- Attempt to look at correlations in the dataset summary statistics
+
+See if any correlations can be found in raw table form:
+```{r}
+cor(dataset2)
+```
+
+Look at corrlations in a chart form (easier to read)
+```{r}
+corrplot(cor(dataset2))
+```
+
+Any immediate correlations?
+
+Interesting ones are Weight_softs_DF (value 1 "Heavy") and Male has a stronger correlation than Females.
+
+
+# Typical charts
+
+1.  Sales value per month
+```{r}
+plot(dataset2$Month, dataset2$`Total Sales by Month`) 
+```
+
+2.  Sales 'count' per month
+```{r}
+plot(dataset2$Month, dataset2$`Count of Sales`) 
+```
+
+3. Chart to show count of sales coloured by DF_month
+
+```{r}
+plot_ly(data = dataset2, x = dataset2$Month, y = dataset2$`Count of Sales`, color = dataset2$DF_month)
+```
+
+# Extract from Regression session..
+
+Generate test data from stats dataset.
+```{r}
+set.seed(123)
+split <- sample.split(dataset2, SplitRatio=0.75)
+train <- subset(dataset2, split==TRUE)
+test <- subset(dataset2, split==FALSE)
+```
+
+Calculate univariate model using Weight 1 and M which were identified from first attempt of correlation.
+```{r}
+univariateModel <- lm(formula = `Weight 1` ~M, data=train)
+summary(univariateModel)
+```
+
+Based on the summary the p-value for M (male) is 0.00154 - which means this could be meaningful.. the p-value for 'Weight 1' (heavy) is 0.25587 - which means this could be non-meaningful for the model.
+
+Plot line on training data.
+```{r}
+plot(x=train$`Weight 1`, y=train$M)
+abline(univariateModel)
+```
+
+# Evaluate the model
+
+Generate prediction based on the model and test data and apply to test dataset.
+```{r}
+test$M.predicted <- predict(univariateModel, test)
+```
+
+Visualise the relationship and fit a line based on regression..
+
+Reload librarys
+```{r}
+library(ggplot2)
+library(plotly)
+```
+
+Generate graph
+```{r}
+pl1 <-test %>% 
+  ggplot(aes(y = M,x = `Weight 1`)) +
+  geom_point(alpha=0.5) + 
+  stat_smooth() +
+  ylab('Actual value of M') +
+  xlab('Month')+
+  theme_bw()+
+  geom_abline(intercept = -1846, slope = 3.871) # Regression line added as intercept and slope due to no line shown. Still no line shown.
+
+
+ggplotly(pl1)
+```
+
+Error in the above to show a actual Regression line..
+
+Attempt two without a element of smoothness:
+```{r}
+pl2 <-dataset2 %>% 
+  ggplot(aes(y = M,x = Month)) +
+  geom_point(alpha=0.5) + 
+  ylab('Actual value of M') +
+  xlab('Month')+
+  theme_bw()+
+  geom_abline(intercept = -1846, slope = 3.871)
+
+
+ggplotly(pl2)
+```
+
+Failed..
+
+Plot residules to look for any other pattern:
+
+```{r}
+plot(univariateModel$residuals)
+```
+
+Potential pattern found in the residuals.
+
+# Conclusion for this link 'interesting ones are Weight_softs_DF (value 1 "Heavy") and Male has a stronger correlation than Females?'
+
+In summary the answer is yes according to the data. 
+There is a relationship between the Scarf sales can be determined by Excel spreadsheets and looking at the trend of sales over time. The flow of sales in trend with the calendar months which we can look in more depth when we look at how region affects sales. 
+
+Regression procedure is correct however there is not enough data taken to create a accurate calculation, after discussion with decoded we need more data to be more effective.
+
+
+
+## Question - Quantity of scarfs sold increase in winter months?
+
+Discussion with Daniel Noonan and during 'drop in session' which advised to expand the dataset from months to calendar weeks.
+
+Import new figures from excel sheet into new data frame.
+```{r}
+dataset3 <- read_xlsx("DF - regression_cleansed.xlsx", sheet=3)
+```
+
+Plot a graph to show trend of sales over the calendar weeks.
+```{r}
+plot(x=dataset3$Calendar_Week, y=dataset3$`Count of Sales`)
+```
+
+Plot a graph to show the total sales by month.
+```{r}
+plot(x=dataset3$Calendar_Week, y=dataset3$`Total Sales by Month`)
+```
+
+Initial trend is that sales of scarfs increase at then end of the year so that statement would be true from the data we have.
+
+Plot the correlation of the new data frame.
+```{r}
+corrplot(cor(dataset3))
+```
+
+Some observations of note is that we can determine from the data is that most people buy a scarf locally. 
+
+Experiment
+```{r}
+ggplot(dataset3, aes(factor(dataset3$Calendar_Week), dataset3$`Count of Sales` / dataset3$`Weight 1`)) +
+  geom_line(size = 1, alpha = 0.8) +
+  geom_point(size = 2) +
+  xlab("Calendar week") +
+  ylab("Proportion of sales of Soft Scarfs")
+```
+
+Experiment
+```{r}
+ggplot(dataset3, aes(dataset3$Calendar_Week)) + geom_point(aes(y=dataset3$APAC), color="red") + geom_point(aes(y=dataset3$`MIDDLE EAST`), color = "green") + geom_point(aes(y=dataset3$EUROPE), color="blue") + geom_point(aes(y=dataset3$AMERICAS), color="yellow")  + geom_point(aes(y=dataset3$`REST OF EMEIA`), color="purple") +
+  geom_smooth(method='lm') +
+  xlab("Week") +
+  ylab("Proportion of sales for each Region")
+```
+
+
+## Visulisation of different data
+
+AIM: We predict based on last years data when to increase focus on Scarf sales.
+
+Generated another dataframe with the data in a different format. This is due to experimentation on 'Question - Quantity of scarfs sold increase in winter months?' section.
+```{r}
+dataset4 <- read_xlsx("DF - regression_cleansed.xlsx", sheet = 4)
+```
+
+Plot of graph with labels for Scarf sales for each region showing the trends.
+```{r}
+labels_Regions <- c(
+"EUROPE" = expression(EUROPE), 
+"MIDDLE_EAST" = expression(MIDDLE_EAST), 
+"APAC" = expression(APAC),
+"AMERICAS" = expression(AMERICAS), 
+"REST_OF_EMEIA" = expression(REST_OF_EMEIA)
+)
+
+ggplot(dataset4, aes(dataset4$Week, dataset4$`Sales Count`, shape=dataset4$Region, colour=dataset4$Region, fill=dataset4$Region)) +
+geom_smooth(method="lm", show.legend = FALSE) +
+geom_point(size=3) +
+theme_bw() + 
+xlab("Weeks") +
+ylab("Sales Count") +
+ggtitle("Scarf Sales by region") + 
+expand_limits(y=0) +
+coord_fixed(ratio = 1/30, expand = TRUE, clip = "off") +
+scale_shape(labels = labels_Regions) + 
+scale_colour_discrete(labels = labels_Regions) + 
+guides(fill = "none")
+```
+
+From this graph we can see that sales are higher in the Winter months particularly for APAC and EUROPE. A general trend of increased sales is observed in this time period too. 
+
+
+# Fresh attempt
+
+Another attempt performed after futher discussion with colleagues.
+
+# Brief
+
+In this notebook we will be using data set aquired by Audrey on Scarf Sales.
+The dataset was a CSV and converted to XLSX. Each row contains information about the scarf sales. The columns relate to entries such as Scarf type, region bought, value of sale, etc.
+
+We will use the Scarf Sales data to look at trends in Winter and compare with Summer. To gather potential variables for use in predicting trends and 
+
+Import the data for use into a dataframe.
+
+```{r}
+dataset <- read_xlsx("DF - regression_cleansed.xlsx", sheet = 1)
+```
+
+View the data frame, statistics and column information.
+```{r}
+summary(dataset)
+str(dataset)
+```
+
+Remove all null data (light easy clean).
+```{r}
+datasetNN <-  na.omit(dataset)
+```
+
+Generate test and train datasets to be used to test predictions.
+```{r}
+set.seed(123)
+sampleNN <- sample.split(datasetNN2, SplitRatio = 2/3)
+trainNN <- subset(datasetNN2, sampleNN==TRUE) 
+testNN  <- subset(datasetNN2, sampleNN==FALSE)
+```
+
+Perform a light test to see if there is any correlation between the seasons (Month_DF) and the quanty of sales:
+
+```{r}
+cor.test( ~ cal_month_DF + quantity,
+         data=datasetNN,
+         method = "pearson",
+         conf.level = 0.95)
+```
+
+There doesnt appear to be a Correlation.
+
+Created a summary sheet in Excel to generate statistics on the data captured. I then produce a correlation graph to show any correaltion without fixating on a month or any factor.
+```{r}
+library(corrplot)
+library(readxl)
+datasetNN2 <- read_xlsx("DF - regression_cleansed.xlsx", sheet = 3)
+cor.test( ~ datasetNN2$Month + datasetNN2$`Count of Sales`,
+         data=datasetNN2,
+         method = "pearson",
+         conf.level = 0.95)
+
+corrplot(cor(datasetNN2))
+```
+
+I create a Univariate model based on Count of sales against Month.
+```{r}
+univariateModel <- lm(formula = `Count of Sales` ~ Month, data=trainNN)
+summary(univariateModel)
+```
+
+Visualisation of the data as a whole. Grouped by the month (Month DF) with a regression line applied (via Univariate model). 
+```{r}
+plot(y=trainNN$`Count of Sales`, x=trainNN$Month)
+abline(univariateModel)
+```
+
+Lets go back to the main objective of finding the variables in summer and winter and see if we can create a good predictor of sales.
+
+# Winter Data
+
+Winter data (Month_DF 1) extracted and stored and displayed in a statistical form.
+
+```{r}
+WinterDS <- datasetNN2 %>%
+  filter(Month == 1)
+
+ggplot(WinterDS, aes(x = Calendar_Week, y = `Count of Sales`))+
+  geom_point()
+```
+
+Using correlation module to look for any correaltions in the Winter data.
+
+```{r}
+corrplot(cor(WinterDS))
+```
+When looking at the data we see a high correlation with the calendar week and europe, middle east and Americas. No or litte correaltion in APAC and Tourist values.
+
+Correlation figures for the columns:
+```{r}
+cor(WinterDS)
+```
+
+Create a univariate model with the following predictor variables: 
+Target Variable: Count of Sales
+Predictor Variable: Middle East, Europe, Americas, Local, weight 1
+
+lm([target variable] ~ [predictor variables], data = [data source])
+
+```{r}
+univariateModelWinter <- lm(formula = `Count of Sales` ~ `MIDDLE EAST`+EUROPE+AMERICAS+Local+`Weight 1`, data=trainNN)
+summary(univariateModelWinter)
+```
+
+Looking at the P values:
+
+The p-value for Middle East is 0.3532. This means a 35% chance this predictor is not meaningful.
+The p-value for EUROPE is 0.6685. This means a 67% chance this predictor is no meaningful.
+The p-value for AMERICAS is 3.49e-05. A very small value means that age is probably an excellent addition to the model.
+The p-value for Local is 0.8799. This means a 88% chance this predictor is no meaningful.
+The p-value for Weight 1 is 5.38e-08. A very small value means that age is probably an excellent addition to the model.
+
+Americas and Weight 1 appear to be good variables for a prediction.
+
+Lets check the residuals to see any trend.
+
+```{r}
+plot(univariateModelWinter$residuals)
+```
+We can see a few curves in the residuals.
+
+If we run a univariate Model again this time with the two predictors we get the following:
+
+```{r}
+univariateModelWinter1 <- lm(formula = `Count of Sales` ~ (AMERICAS + `Weight 1`), data=trainNN)
+summary(univariateModelWinter1)
+```
+
+When comparing the 'Multiples in R-squared' from both calculations we see that there is not much difference between the two but the Adjusted R-squared value accounts for more focused prediction.
+
+Lets check the residuals:
+
+```{r}
+plot(univariateModelWinter1$residuals)
+```
+When checking the residuals there is a slight pattern.
+
+
+Lets plot the prediction against the data to see how much we capture.
+```{r}
+plot(y=trainNN$`Count of Sales`, x=trainNN$Calendar_Week)
+abline(univariateModelWinter1)
+```
+
+The regression line doesnt appear on the graph. with error: "only using the first two of 3 regression coefficients"
+
+
+# Summer Data
+
+
+Summer data (Month_DF 3) extracted and stored and displayed in a statistical form.
+```{r}
+SummerDS <- datasetNN2 %>%
+  filter(Month == 3)
+
+ggplot(SummerDS, aes(x = Calendar_Week, y = `Count of Sales`))+
+  geom_point()
+```
+
+Using correlation module to look for any correaltions in the Summer data.
+
+```{r}
+corrplot(cor(SummerDS))
+```
+When looking at the data we see a high correlation with the calendar week and Weight 1, Female, Touist and APAC values. No or weak correaltion in other values and a weird negative correlation with Local value.
+
+Correlation figures for the columns:
+```{r}
+cor(SummerDS)
+```
+
+Create a univariate model with the following predictor variables: 
+Target Variable: Count of Sales
+Predictor Variable: Female, Weight 1, Tourist, APAC
+
+lm([target variable] ~ [predictor variables], data = [data source])
+
+```{r}
+univariateModelSummer <- lm(formula = `Count of Sales` ~ `Weight 1`+F+Tourist+APAC, data=trainNN)
+summary(univariateModelSummer)
+```
+Looking at the P values:
+
+The p-value for Weight 1 is 2.15e-10.  A very small value means that Weight 1 is probably an excellent addition to the model.
+The p-value for F is 0.000174.  A very small value means that Female is probably an excellent addition to the model.
+The p-value for Tourist is 0.687049. This means a 69% chance this predictor is no meaningful.
+The p-value for APAC is 0.417030. This means a 42% chance this predictor is no meaningful.
+
+Female and Weight 1 appear to be good variables for a prediction.
+
+Lets check the residuals to see any trend.
+
+```{r}
+plot(univariateModelSummer$residuals)
+```
+
+We can see a few curves in the residuals.
+
+If we run a univariate Model again this time with the two predictors we get the following:
+
+```{r}
+univariateModelSummer1 <- lm(formula = `Count of Sales` ~ (F + `Weight 1`), data=trainNN)
+summary(univariateModelSummer1)
+```
+
+When comparing the 'Multiples in R-squared' from both calculations we see that there is not much difference between the two but the Adjusted R-squared value accounts for more focused prediction.
+
+Lets check the residuals:
+
+```{r}
+plot(univariateModelSummer1$residuals)
+```
+When checking the residuals there is a slight pattern, quiet similar to the calculation with multiple variables.
+
+Lets plot the prediction against the data to see how much we capture.
+
+```{r}
+plot(y=trainNN$`Count of Sales`, x=trainNN$Calendar_Week)
+abline(univariateModelSummer1)
+```
+
+The regression line doesnt appear on the graph. with error: "only using the first two of 3 regression coefficients"
+
+# Conclusion
+
+Overall figures
+
+Looking at the data, in Autumn and Winter you have the highest quantity of sales during this period with a noticable dip in quantity of sales in hotter seasons.
+
+Winter
+
+Looking at the main plot we can see figures rise in the december and january months. When looking for key factors, we found the following factors as good predictors by looking at the P-Values:
+AMERICAS
+WEIGHT 1
+
+Summer
+
+Looking at the main plot we can see figures rise in a slope when heading into Autumn. When looking for key factors, we found the following factors as good predictors by looking at the P-Values:
+FEMALE
+WEIGHT 1
+
+So in conclusion based on P-values we can see that Heavy scarfs (Weight 1) is a good variable to predict quantity of sales in Winter and Summer. In Winter you can add AMERICAS value to improve the prediction and in Summer you can use FEMALE value to improve the prediction.
+
+

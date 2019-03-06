@@ -1,0 +1,30 @@
+---
+title: "Clustering for Clust1"
+output: html_notebook
+---
+
+Wonder what Kmeans does to the data collected in clust101pt1
+
+```{r}
+install.packages("readxl")
+library(readxl)
+
+data101 <- read_excel("clust101pt1.xlsx", sheet = "Modified")
+
+head(data101)
+
+#find 3 clusters based on the data in 'Analysis cat count' spreadsheet
+kClusters <-3
+
+#convert the data to data frame for kmeans processing.
+data101 <- as.data.frame(data101)
+
+#calculate the Kmeans for the ANCATC data into 3 clusters.
+kMeansResult <- kmeans(data101[c("Average Age","Average Annual Income")], centers = kClusters)
+
+#create a new column in dataANCATC and apply the cluster value for use in plots.
+data101$cluster <- kMeansResult$cluster
+#convert the cluster column to factor type.
+data101$cluster <- as.factor(data101$cluster)
+```
+

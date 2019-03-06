@@ -1,0 +1,356 @@
+---
+title: "Data Fellowship Group Notebook"
+output: html_notebook
+---
+
+# Problem statement
+Very little trend analysis done on tickets, so we are investigating to provide some preliminary analysis to understand trends and identify problems to reduce the amount of tickets raised.
+
+# Summary proposal
+ 
+As a large corporation Burberry deals with tens of thousands of IT service desk tickets yearly coming from all services and countries across the company.
+Those service desk tickets cover an extremely wide number of activities going from access issues, hardware requests, order processing blockers or Finance problems to name just a few. This is why it is critical for Burberry to understand better service desk tickets patterns.
+ 
+In order to identify trends and allocate resources and efforts in an efficient manner, our data science group is looking at clusters of IT service desks tickets for:
+ 
+Number of calls vs. average resolution time by service
+Number of countries vs. average resolution time by service
+Number of services vs average resolution time by country (Retail only to avoid skewing the data with HFH)
+ 
+We will be using kmeans to produce meaningful clusters and issue a series of recommendations based on the outcome of our analysis.
+
+# Initial meeting
+ 
+Initial ideas from first meeting: 12/7/2018 14:30
+--
+As a group agreed:
+ 
+Data Source:
+ASKIT Tickets
+ 
+Variables:
+Department Raised
+Resolution Time
+Category
+ 
+Problems to address:
+Which stores / departments raise which kind of categories
+Which categories are raised the most
+Which type of categories take longest to solve
+--
+
+# Second meeting
+ 
+Group Meeting: Thursday, 26 July 2018 15:00
+--
+Problem Statement:
+ 
+Very little trend analysis done on tickets, so we are investigating to provide some preliminary analysis to understand trends and identify problems to reduce the amount of tickets raised.
+ 
+Problem ideas:
+ 
+No trend analysis done on tickets, unknown which departments raise the most tickets, which locations need the most assistance.
+What areas of the business need more support? Identify areas of stress due to response and ticket close times.
+ 
+Initial delegation:
+ 
+Daniel - acquire and initial cleanse of data
+Audrey - averaging the durations for the data
+Ross - Script creation and scatterplots
+Shaji - unavailable due to holiday and other commitments.
+ 
+# Third meeting 
+ 
+Group Meeting: 27 July 2018 10:06
+ 
+Here see below what we agreed together:
+ 
+Analysis
+ 
+Count of calls vs. avg resolution time by function
+Count of countries vs. avg resolution time by function; I think it is fine to leave UK here as it would just count as 1 country regardless of the number of calls
+Count of functions vs avg resolution time by country (Retail only maybe to avoid skewing the data with HFH)
+ 
+We can’t do count of countries vs count of functions as you would just have one data point so I have left the avg resolution time as a y variable. Please advise if you have other ideas.
+ 
+ 
+Tasks
+ 
+Summary – Audrey / Ross
+Precleaning of data to group them by cleaner functions (without deleting original data grouping) - Daniel
+Final data clean up and preparation of data to plot analysis mentioned above - Audrey
+Build R framework for kmeans & graphical analysis – Ross
+ 
+# Data collection and cleansing
+ 
+As a group we delegated Daniel to collect a set of data from Remedy ticketing system on Tickets logged in the system from the 1st Jan 2018 to 26th July 2018. He cleaned the data of incomplete data and performed the initial correlation of categories and reorganised these to into a new column.
+ 
+Once complete and after a quick discussion in a group he split the data into three groups Supply Chain, Corporate, Retail and handed to Audrey for further cleansing and creation of PivotTables for initial analysis looking at the figures. 
+ 
+# Summary without Kmeans and clustering
+ 
+We are able to see the outliers in the data, we agreed that these would skew the correlation and therefore negatively affect our conclusions. The outliers were noted and removed from the data set.
+ 
+Upon initially reviewing the data we came to the following conclusions:
+ 
+The incident count variable does not affect the ticket duration. In other words - in our dataset - the frequency of a ticket category being raised does not affect the time it takes for a ticket to be resolved.
+Categories are affecting countries as expected with more global areas and services affecting more countries. There does not seem to be a link between count of countries affected and category resolution time. It is possible to see that certain vendors take longer to resolve tickets than others.
+As expected countries with higher levels of services and functions operating within them have higher levels of incident category count. There does not seem to be a correlation between the amount of incident categories affecting a country and its average ticket duration. 
+
+# R Script
+
+Using a combination of code from the previous Data Fellowship modules as the base of the script, we then added the new kmeans and plotting code from the newer modules. 
+
+Install and load relevant librarys.
+
+```{r}
+#Set the working directory
+setwd("~/Group/Grp1")
+#Install needed packages
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("readxl")
+install.packages("gplots")
+#Load needed packages for use in script.
+library("ggplot2")
+library(tidyverse)
+library(readxl)
+library(gplots)
+```
+
+
+Import data from speadsheet
+
+```{r}
+#Read the relevant XLSX sheets into a array for use in R. Further information on reading xlsx files: https://stackoverflow.com/questions/7049272/importing-excel-files-into-r-xlsx-or-xls
+dataANIC <- read_excel("report DF.xlsx", sheet = "Analysis incident count")
+dataANCC <- read_excel("report DF.xlsx", sheet = "Analysis country count")
+dataANCATC <- read_excel("report DF.xlsx", sheet = "Analysis cat count")
+```
+
+
+Ensure the data is in acceptable format for presentation graphs
+
+```{r}
+# review the headers of the files and ensure data is present and the relevant columns
+head(dataANIC)
+head(dataANCC)
+head(dataANCATC)
+```
+
+
+# Initial Visulisations based on the data collected.
+
+ 
+- Count of calls vs. avg resolution time by function
+
+
+```{r}
+
+#Plot the graph based on the data in 'Analysis incident count' spreadsheet
+ggplot(dataANIC, aes(x= dataANIC$`Average of Ticket Duration (number days)`, y= dataANIC$`Count of Incident: Number`)) +
+  geom_point() +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 40)) +
+  ylim(c(0, 26000)) +
+  labs(subtitle="Source:Analysis incident count", y="Count of Incident: Number" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by function" )
+
+#print the graph to PDF file.
+ggsave("ANIC.pdf", limitsize = FALSE)
+
+```
+
+- Count of countries vs. avg resolution time by function
+Note: It is fine to leave UK here as it would just count as 1 country regardless of the number of calls
+
+
+```{r}
+#Plot the graph based on the data in 'Analysis country count' spreadsheet
+ggplot(dataANCC, aes(x= dataANCC$`Average of Ticket Duration (number days)`, y= dataANCC$`Distinct Count of Country`)) +
+  geom_point() +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 200)) +
+  ylim(c(0, 40)) +
+  labs(subtitle="Source:Analysis country count", y="Distinct Count of Country" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by Distinct Count of Country" )
+
+#save the graph to PDF file
+ggsave("ANCC.pdf")
+```
+
+
+- Count of functions vs avg resolution time by country 
+Note: Retail only maybe to avoid skewing the data with HFH
+
+```{r}
+#Plot the graph based on the data in 'Analysis cat count' spreadsheet
+ggplot(dataANCATC, aes(x= dataANCATC$`Average of Ticket Duration (number days)`, y= dataANCATC$`Distinct Count of Harmonised Category Name`)) +
+  geom_point() +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 10)) +
+  ylim(c(0, 150)) +
+  labs(subtitle="Source:Analysis cat count", y="Distinct Count of Harmonised Category Name" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by Distinct Count of Harmonised Category Name" )
+
+#save the graph to PDF file
+ggsave("ANCATC.pdf")
+```
+
+# Visulisations based on the Kmeans with graphs
+
+Work out clusters using Kmeans. First look at 3 Kmeans clusters then work out the optimum number of Kmeans clusters for each set.
+
+- Clustering for 'Count of calls vs. avg resolution time by Distinct Count of Harmonised Category Name' chart.
+
+```{r}
+#find 3 clusters based on the data in 'Analysis cat count' spreadsheet
+kClusters <-3
+
+#convert the data to data frame for kmeans processing.
+dataANCATC <- as.data.frame(dataANCATC)
+
+#calculate the Kmeans for the ANCATC data into 3 clusters.
+kMeansResult <- kmeans(dataANCATC[c("Average of Ticket Duration (number days)","Distinct Count of Harmonised Category Name")], centers = kClusters)
+
+#create a new column in dataANCATC and apply the cluster value for use in plots.
+dataANCATC$cluster <- kMeansResult$cluster
+#convert the cluster column to factor type.
+dataANCATC$cluster <- as.factor(dataANCATC$cluster)
+
+#Plot the graph to show the data coloured by which cluster it is a part of.
+ggplot(dataANCATC, aes(x= dataANCATC$`Average of Ticket Duration (number days)`, y= dataANCATC$`Distinct Count of Harmonised Category Name`)) +
+  geom_point(aes(col=dataANCATC$cluster)) +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 10)) +
+  ylim(c(0, 150)) +
+  labs(subtitle="Source:Analysis cat count", y="Distinct Count of Harmonised Category Name" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by Distinct Count of Harmonised Category Name" )
+
+# save the plot to file
+ggsave("ANCATC_cluster.pdf", limitsize = FALSE)
+
+#find optimum amount of clusters
+kClustersMax <- 10
+
+wss <- sapply(1:kClustersMax,
+        function(k){kmeans(dataANCATC[c("Average of Ticket Duration (number days)","Distinct Count of Harmonised Category Name")], k)$tot.withinss})
+
+plot(1:kClustersMax, wss,
+       type="b", pch = 19, frame = FALSE,
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
+
+```
+
+- Clustering for 'Count of calls vs. avg resolution time by Distinct Count of Country' chart.
+
+```{r}
+#find 3 clusters based on the data in 'Analysis country count' spreadsheet
+kClusters <-3
+
+#convert the data to data frame for kmeans processing.
+dataANCC <- as.data.frame(dataANCC)
+
+#calculate the Kmeans for the ANCC data into 3 clusters.
+kMeansResult <- kmeans(dataANCC[c("Average of Ticket Duration (number days)","Distinct Count of Country")], centers = kClusters)
+
+#create a new column in dataANCC and apply the cluster value for use in plots.
+dataANCC$cluster <- kMeansResult$cluster
+
+#convert the cluster column to factor type.
+dataANCC$cluster <- as.factor(dataANCC$cluster)
+
+#Plot the graph to show the data coloured by which cluster it is a part of.
+ggplot(dataANCC, aes(x= dataANCC$`Average of Ticket Duration (number days)`, y= dataANCC$`Distinct Count of Country`)) +
+  geom_point(aes(col=dataANCC$cluster)) +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 10)) +
+  ylim(c(0, 150)) +
+  labs(subtitle="Source:Analysis country count", y="Distinct Count of Country" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by Distinct Count of Country" )
+
+# save the plot to file
+ggsave("ANCC_cluster.pdf", limitsize = FALSE)
+
+#find optimum amount of clusters
+kClustersMax <- 10
+
+wss <- sapply(1:kClustersMax,
+        function(k){kmeans(dataANCC[c("Average of Ticket Duration (number days)","Distinct Count of Country")], k)$tot.withinss})
+
+plot(1:kClustersMax, wss,
+       type="b", pch = 19, frame = FALSE,
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
+
+```
+
+- Clustering with 'Count of calls vs. avg resolution time by function' graph
+
+```{r}
+#find 3 clusters based on the data in 'Analysis incident count' spreadsheet
+kClusters <-3
+
+#convert the data to data frame for kmeans processing.
+dataANIC <- as.data.frame(dataANIC)
+
+#calculate the Kmeans for the ANIC data into 3 clusters.
+kMeansResult <- kmeans(dataANIC[c("Average of Ticket Duration (number days)","Count of Incident: Number")], centers = kClusters)
+
+#create a new column in dataANIC and apply the cluster value for use in plots.
+dataANIC$cluster <- kMeansResult$cluster
+#convert the cluster column to factor type.
+dataANIC$cluster <- as.factor(dataANIC$cluster)
+
+#Plot the graph to show the data coloured by which cluster it is a part of.
+ggplot(dataANIC, aes(x= dataANIC$`Average of Ticket Duration (number days)`, y= dataANIC$`Count of Incident: Number`)) +
+  geom_point(aes(col=dataANIC$cluster)) +
+  geom_smooth(method="lm", se=F) +
+  xlim(c(0, 40)) +
+  ylim(c(0, 26000)) +
+  labs(subtitle="Source:Analysis incident count", y="Count of Incident: Number" , x="Average of Ticket Duration (number days)" , title="Count of calls vs. avg resolution time by function" )
+
+# save the plot to file
+ggsave("ANIC_cluster.pdf", limitsize = FALSE)
+
+#find optimum amount of clusters
+kClustersMax <- 10
+
+wss <- sapply(1:kClustersMax,
+        function(k){kmeans(dataANIC[c("Average of Ticket Duration (number days)","Count of Incident: Number")], k)$tot.withinss})
+
+plot(1:kClustersMax, wss,
+       type="b", pch = 19, frame = FALSE,
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
+
+```
+
+# Summary with Kmeans and clustering
+ 
+Upon applying further analysis using KMEANs we found our initial conclusions were confirmed. The graphs that we outputted did show the data in a more approachable way but did not lead to any new discoveries to complement the conclusions.
+ 
+# Answers to questions
+ 
+Question: Is there a link between the number of calls and average resolution time by service?
+H0 - The variables are independent, there is no correlation between call count and average resolution time.
+HA - The variables are not independent, there is a correlation between call count and average resolution time.
+H0 is True
+ 
+Question: Is there a link between countries and average resolution time by service?
+H0 - The variables are independent, there is no correlation between countries and average resolution time.
+HA - The variables are not independent, there is a correlation between countries and average resolution time.
+H0 is True
+ 
+Question: Is there a link between services vs average resolution time by country (Retail only to avoid skewing the data with HFH)
+H0 - The variables are independent, there is no correlation between services and average resolution time by country.
+HA - The variables are not independent, there is a correlation between services and average resolution time by country.
+H0 is True
+ 
+# Conclusion
+ 
+Whilst our initial data set seemed to have promising potential for trend and cluster analysis, the variables that we chose within the data ultimately did not reveal meaningful trends. To get more value out of this data we could conduct trend analysis by week or month rather than a 6 month period. This shows the importance of getting to know the data more intimately before attempting to select variables for correlation.
+ 
+# Reflection
+We have found that there was issues with project. Issues identified:
+Personnel time commitments, difficult to projects and high priority incidents.
+Scope identified is too large we needed to be more specific and simplified.
+Issues with R in terms of applying a legend to the graphs.
+Selecting Data with meaningful application to clustering.
+Selecting the best type of analysis for our data.

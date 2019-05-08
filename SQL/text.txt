@@ -1,0 +1,6 @@
+INSERT INTO product (productID, productName, productLine, quantityInStock, price)
+VALUES (R10-0001, RubberDucky, USB, 2000, 10.99);
+VALUES (R10-0002, RasberryPIv2, Board, 300, 25.99);
+VALUES (R10-0003, RadMonitor, Monitor, 10, 100.99);
+VALUES (R10-0004, SuperDucky, USB, 200, 22.99);
+VALUES (R10-0001, RasberryPIv3, Board, 2000, 25.00);
